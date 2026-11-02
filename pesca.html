@@ -1,0 +1,124 @@
+
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Super Pesca</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#123b52;color:white;font-family:Arial;text-align:center}
+#game{width:100%;max-width:950px;margin:auto;padding:8px}
+h1{margin:5px;font-size:clamp(22px,5vw,38px)}
+button{border:0;border-radius:12px;padding:13px 20px;font-size:18px;font-weight:bold;margin:5px;cursor:pointer}
+#scene{position:relative;height:58vh;min-height:230px;max-height:470px;overflow:hidden;border:4px solid #d8e7e9;border-radius:15px;background:linear-gradient(#70c9ef 0 42%,#e9d28b 42% 48%,#1687b0 48% 100%)}
+#sun{position:absolute;right:12%;top:8%;font-size:40px}
+#land{position:absolute;top:35%;width:100%;height:16%;background:#55934e;clip-path:polygon(0 75%,15% 10%,30% 65%,50% 0,70% 65%,85% 15%,100% 70%,100% 100%,0 100%)}
+#waves{position:absolute;top:49%;width:100%;height:51%;background:repeating-linear-gradient(175deg,transparent 0 24px,#ffffff20 25px 27px,transparent 28px 45px)}
+#rod{position:absolute;left:12%;top:35%;font-size:clamp(60px,12vw,100px);transform:rotate(-25deg)}
+#bobber{position:absolute;left:65%;top:64%;font-size:28px}
+#fish{position:absolute;left:65%;top:75%;font-size:35px;display:none}
+#status{font-size:19px;font-weight:bold;margin:8px}
+#menu{position:absolute;inset:0;background:#092d43eF;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#menu h2{font-size:clamp(25px,6vw,42px)}
+.mode{width:42%;max-width:260px;color:white}
+#arcade{background:#e79b26}#realista{background:#27845c}
+#controls{display:flex;justify-content:center;flex-wrap:wrap}
+#cast{background:#e89a25}#reel{background:#2b9c65}
+#reel:disabled,#cast:disabled{opacity:.4}
+#stats{font-size:16px;margin:5px}
+</style>
+</head>
+<body>
+<div id="game">
+<h1>🎣 SUPER PESCA</h1>
+<div id="stats">🐟 Peixos: <span id="score">0</span> | 💰 Monedes: <span id="money">0</span></div>
+<div id="scene">
+<div id="sun">☀️</div><div id="land"></div><div id="waves"></div>
+<div id="rod">🎣</div><div id="bobber">🔴</div><div id="fish">🐟</div>
+<div id="menu">
+<h2>Vols arcade o realista?</h2>
+<div>
+<button class="mode" id="arcade" onclick="start('arcade')">🐠 ARCADE</button>
+<button class="mode" id="realista" onclick="start('realista')">🌊 REALISTA</button>
+</div>
+<p>Pesca peixos i aconsegueix monedes!</p>
+</div>
+</div>
+<div id="status">Tria un mode per començar.</div>
+<div id="controls">
+<button id="cast" onclick="cast()">🎯 LLANÇAR</button>
+<button id="reel" onclick="reel()" disabled>🎣 RECOLLIR!</button>
+<button onclick="sound=!sound;this.textContent=sound?'🔊 SO ON':'🔇 SO OFF'">🔊 SO ON</button>
+</div>
+</div>
+<script>
+let mode='',score=0,money=0,bite=false,waiting=false,sound=true,fishTimer=null;
+const species=[
+ ['🐟','Peix petit',5],['🐠','Peix tropical',10],
+ ['🐡','Peix globus',15],['🦈','Tauró',30],
+ ['🐬','Dofí',25],['🐙','Pop',20]
+];
+function tone(freq=500,duration=.12){
+ if(!sound)return;
+ try{
+  const c=new(window.AudioContext||window.webkitAudioContext)();
+  const o=c.createOscillator(),g=c.createGain();
+  o.frequency.value=freq;o.connect(g);g.connect(c.destination);
+  g.gain.value=.08;o.start();o.stop(c.currentTime+duration);
+  o.onended=()=>c.close();
+ }catch(e){}
+}
+function start(m){
+ mode=m;score=0;money=0;update();
+ document.getElementById('menu').style.display='none';
+ document.getElementById('status').textContent=m==='arcade'?'Mode arcade: pesca ràpid!':'Mode realista: espera que piqui un peix...';
+ tone(650);
+}
+function cast(){
+ if(!mode||waiting)return;
+ waiting=true;bite=false;
+ document.getElementById('cast').disabled=true;
+ document.getElementById('reel').disabled=true;
+ document.getElementById('fish').style.display='none';
+ document.getElementById('status').textContent='Has llançat la canya... espera!';
+ tone(350,.2);
+ let delay=mode==='arcade'?1500+Math.random()*2500:3500+Math.random()*4500;
+ fishTimer=setTimeout(()=>{
+  bite=true;
+  document.getElementById('fish').style.display='block';
+  document.getElementById('status').textContent='🐟 HA PICAT! RECOLLIR ARA!';
+  document.getElementById('reel').disabled=false;
+  tone(850,.3);
+ },delay);
+}
+function reel(){
+ if(!waiting)return;
+ if(bite){
+  let f=species[Math.floor(Math.random()*species.length)];
+  if(mode==='realista'&&Math.random()<.25){
+   document.getElementById('status').textContent='El peix s’ha escapat! Torna-ho a provar.';
+   tone(180,.3);
+  }else{
+   score++;money+=f[2];
+   document.getElementById('status').textContent='Has pescat '+f[0]+' '+f[1]+'! +'+f[2]+' monedes';
+   tone(700,.2);
+  }
+ }else{
+  document.getElementById('status').textContent='Encara no havia picat cap peix!';
+  tone(200,.2);
+ }
+ clearTimeout(fishTimer);
+ waiting=false;bite=false;
+ document.getElementById('fish').style.display='none';
+ document.getElementById('cast').disabled=false;
+ document.getElementById('reel').disabled=true;
+ update();
+}
+function update(){
+ document.getElementById('score').textContent=score;
+ document.getElementById('money').textContent=money;
+}
+</script>
+</body>
+</html>
